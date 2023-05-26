@@ -1,0 +1,48 @@
+<# 
+Script for creating k8s secrets with SSL certificate in two variations: a TLS secret (from .crt and .key) 
+and a file secret (from .pfx) (if secrets already exist - they are overwritten).
+#>
+
+param (
+    [string]$Domain = $(throw "[Error] Can't create self-signed certificate - no domain name specified. Use the -Domain parameter."),
+    [string]$Context = '',
+    [string]$TlsSecretNamespace = 'test-infra',
+    [string]$CertFileName = 'k8s-ingress-tls.crt',
+    [string]$KeyFileName = 'k8s-ingress-tls.key'
+)
+
+Import-Module -Name "$PSScriptRoot\create_cert_secrets.psm1" -Force
+
+
+$ErrorActionPreference = 'Stop'
+Push-Location $PSScriptRoot
+try {
+    Write-Output "`n$('_' * 80)`n-> Creating a self-signed certificate and a corresponding secrets of TLS type for the k8s cluster"
+
+    $certsPath = "certs\$Domain\selfsigned"
+    
+    # Preparing temporary folder for the certificates
+    if (Test-Path -Path $certsPath) {
+        Remove-Item -Path $certsPath -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $certsPath
+
+    Push-Location $certsPath
+    try {
+        Write-Output "`n   - Generating TLS certificates for domain name [$Domain]"
+        & openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out $CertFileName -keyout $KeyFileName -subj "/CN=$Domain/O=k8s-ingress-tls" -addext "subjectAltName = DNS:$Domain"
+        Write-Output "`n   - TLS certificates generated:`n   - Certificate file: [$CertFileName]`n   - Key file: [$KeyFileName]"
+        
+        # Creating ingress cert secret
+        CreateCpqIngressCertSecret `
+        -CertFileName $CertFileName `
+        -KeyFileName $KeyFileName `
+        -Context $Context
+    }
+    finally {
+        Pop-Location
+    }
+}
+finally {
+    Pop-Location
+}
