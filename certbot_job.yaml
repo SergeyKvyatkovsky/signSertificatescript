@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: certbot
+  labels:
+    app: certbot
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: certbot
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        "kubernetes.io/os": linux
+#      volumes:
+#        - name: cert-volume
+#          persistentVolumeClaim:
+#            claimName: certbot-pvc
+      containers:
+        - name: certbot
+          image: certbot/certbot
+          command:
+            - /bin/sh
+            - '-c'
+            - 'echo "! Registering certbot..."; certbot register --non-interactive --agree-tos -m milan.klepac@sap.com; echo "! Registration complete, requesting certificate"; certbot certonly --standalone --non-interactive --no-redirect --preferred-challenges http -d <INGRESS_DOMAIN_NAME>; echo "! Certbot finished work, cert directory (/etc/letsencrypt/live -> /etc/letsencrypt/archive):"; ls -al /etc/letsencrypt/live; sleep infinity;'
+#            - 'echo "-> Registering certbot"; certbot register --non-interactive --agree-tos -m milan.klepac@sap.com; echo "-> Registration complete, requesting certificate"; certbot certonly --standalone --non-interactive --no-redirect --dry-run --preferred-challenges http -d <INGRESS_DOMAIN_NAME>; echo "-> Certbot finished work, cert directory (/etc/letsencrypt/live -> /etc/letsencrypt/archive):"; ls -al /etc/letsencrypt/live; sleep infinity;'
+          ports:
+            - containerPort: 80
+              name: "http"
+#          volumeMounts:
+#            - name: cert-volume
+#              mountPath: "/etc/letsencrypt/archive"
+          resources:
+            limits:
+              cpu: 200m
+              memory: 500Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi  

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: certbot-service
+  labels:
+    app: certbot
+spec:
+  type: ClusterIP
+  selector:
+    app: certbot
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80

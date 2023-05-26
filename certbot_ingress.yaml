@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: certbot-ingress
+spec:
+  ingressClassName: istio
+  rules:
+  - host: "<INGRESS_DOMAIN_NAME>"
+    http:
+      paths:
+      - path: /.well-known
+        pathType: Prefix
+        backend:
+          service:
+            name: certbot-service
+            port:
+              number: 80
